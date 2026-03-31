@@ -10,8 +10,7 @@ interface Props {
   featuredProducts?: any[]
 }
 
-export default function LandingClient({ page, services, featuredProducts = [] }: Props)
-
+export default function LandingClient({ page, services, featuredProducts = [] }: Props): JSX.Element
 
 function hexToRgb(hex: string) {
   const r = parseInt(hex.slice(1,3),16)
