@@ -88,29 +88,13 @@ export default function SettingsPage() {
     <div className="animate-in max-w-2xl space-y-6">
 
       {/* ─── Header ───────────────────────────────────── */}
-      <div className="flex items-center gap-4">
-        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white text-lg font-bold flex-shrink-0"
-          style={{ background: 'linear-gradient(135deg, var(--clinic-primary), color-mix(in srgb, var(--clinic-primary) 60%, #6366f1))' }}>
-          {initials}
-        </div>
-        <div>
-          <h1 className="font-display text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
-            {doctor.full_name || 'Mi perfil'}
-          </h1>
-          <div className="flex items-center gap-2 mt-0.5">
-            {selectedSpecialty && (
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
-                style={{ background: 'var(--clinic-primary-light)', color: 'var(--clinic-primary)' }}>
-                {selectedSpecialty.label}
-              </span>
-            )}
-            {doctor.clinic_name && (
-              <span className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                · {doctor.clinic_name}
-              </span>
-            )}
-          </div>
-        </div>
+      <div className="mb-6">
+        <h1 className="font-display text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>
+          Configuración
+        </h1>
+        <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+          Gestiona tu perfil y preferencias
+        </p>
       </div>
 
       {/* ─── Tabs ─────────────────────────────────────── */}
