@@ -354,7 +354,7 @@ export default function GestorWebPage() {
             {[
               { done: !!webPage, label: 'Configura tu sitio web', sub: 'Nombre, logo, colores y descripción', href: '/dashboard/gestor-web/configurar' },
               { done: services.length > 0, label: 'Agrega tus servicios', sub: 'Incluye el contexto para entrenar la IA', href: '/dashboard/gestor-web/servicios/nuevo' },
-              { done: totalSlots > 0, label: 'Configura tu disponibilidad', sub: 'Define los horarios y bloques agendables', href: '/dashboard/gestor-web/disponibilidad'},
+              { done: false, label: 'Configura tu disponibilidad', sub: 'Define los horarios y bloques agendables', href: '/dashboard/gestor-web/disponibilidad'},
               { done: stats.page_published, label: 'Publica tu sitio', sub: 'Actívalo para que tus pacientes puedan encontrarte', href: '#' },
             ].map((step, i) => (
               <div key={i} className="flex items-center gap-3">
