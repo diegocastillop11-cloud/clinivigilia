@@ -82,8 +82,7 @@ function ChatPanel({ page, services, initialMessage, onClose }: {
   useEffect(() => {
     if (initialMessage && !sentRef.current) {
       sentRef.current = true
-      setMessages(p => [...p, { role: 'user', content: initialMessage }])
-      setLoading(true)
+      setMessages((p: {role: 'user'|'assistant', content: string}[]) => [...p, { role: 'user' as const, content: initialMessage }])      setLoading(true)
       fetch('/api/gestor-web/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
