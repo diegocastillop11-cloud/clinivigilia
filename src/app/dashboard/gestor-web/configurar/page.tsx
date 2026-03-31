@@ -525,7 +525,6 @@ export default function ConfigurarSitioPage() {
                     className="w-8 h-8 rounded-lg transition-all hover:scale-110 flex-shrink-0"
                     style={{
                       background: c,
-                      ring: form.primary_color === c ? `3px solid ${c}` : 'none',
                       outline: form.primary_color === c ? `3px solid ${c}` : 'none',
                       outlineOffset: '2px',
                       transform: form.primary_color === c ? 'scale(1.15)' : undefined,
