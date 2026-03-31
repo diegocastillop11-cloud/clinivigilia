@@ -52,7 +52,7 @@ function ChatPanel({ page, services, initialMessage, onClose }: {
   const msgBg   = isDark ? '#1e1e38' : '#f3f4f6'
   const textCol = isDark ? '#e5e7eb' : '#111827'
 
-  const [messages, setMessages] = useState(() => {
+  const [messages, setMessages] = useState<{role: 'user'|'assistant', content: string}[]>(() => {
     try {
       const saved = localStorage.getItem(`chat_${page.slug}`)
       return saved ? JSON.parse(saved) : [{
