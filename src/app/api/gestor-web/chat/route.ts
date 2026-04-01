@@ -6,8 +6,17 @@ import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@/lib/supabase/server'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
+// ─── Helpers ─────────────────────────────────────────────
+function formatRut(rut: string): string {
+  const clean = rut.replace(/[^0-9kK]/g, '')
+  if (clean.length < 2) return rut
+  const body = clean.slice(0, -1)
+  const dv   = clean.slice(-1).toUpperCase()
+  const formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${formatted}-${dv}`
+}
+
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! })
-const freshTime = new Date().toLocaleString('es-CL')
 
 export async function POST(req: Request) {
   try {
@@ -82,7 +91,7 @@ export async function POST(req: Request) {
       : 'No hay horarios disponibles en los próximos 14 días.'
 
     // ─── System prompt ───────────────────────────────────
-    const systemPrompt = `Eres el asistente de agendamiento (actualizado: ${freshTime}) de la clínica/consulta con slug "${slug}". Eres amable, conciso y eficiente.
+    const systemPrompt = `Eres el asistente de agendamiento de la clínica/consulta con slug "${slug}". Eres amable, conciso y eficiente.
 
 ## SERVICIOS DISPONIBLES:
 ${servicesContext || 'Sin servicios configurados.'}
@@ -131,15 +140,6 @@ ${slotsContext}
       /AGENDAR\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)/
     )
 
-    function formatRut(rut: string): string {
-      const clean = rut.replace(/[^0-9kK]/g, '')
-      if (clean.length < 2) return rut
-      const body = clean.slice(0, -1)
-      const dv   = clean.slice(-1).toUpperCase()
-      const formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-      return `${formatted}-${dv}`
-    }
-
     if (bookingMatch) {
       const [, patientName, patientRut, patientEmail, patientPhone, apptDate, apptTime, serviceName, durationStr] = bookingMatch
 
@@ -147,14 +147,14 @@ ${slotsContext}
       const firstName   = nameParts[0] || patientName.trim()
       const lastName    = nameParts.slice(1).join(' ') || 'Sin apellido'
       const durationMin = parseInt(durationStr) || 30
-      const cleanRut = formatRut(patientRut.trim())
+      const cleanRut    = formatRut(patientRut.trim())
 
       const matchedService = services.find((s: any) =>
         s.name.toLowerCase().includes(serviceName.trim().toLowerCase()) ||
         serviceName.trim().toLowerCase().includes(s.name.toLowerCase())
       )
 
-      // ── 1. Buscar o crear paciente por RUT (con admin) ──
+      // ── 1. Buscar o crear paciente por RUT ──────────────
       let patientId: string | null = null
 
       const { data: existingPatient } = await supabaseAdmin
@@ -181,7 +181,7 @@ ${slotsContext}
             email:      patientEmail.trim() || null,
             phone:      patientPhone.trim() || null,
             status:     'activo',
-            specialty:  'medicina_general',   // ← AGREGAR ESTA LÍNEA
+            specialty:  'medicina_general',
             notes:      `Paciente registrado desde landing web (${slug})`,
           })
           .select('id')
@@ -201,8 +201,7 @@ ${slotsContext}
         })
       }
 
-      // ── 2.  Crear cita en appointments (con admin) ───────
-      // ── 2.1 Verificar que el slot no esté ocupado ────────────
+      // ── 2. Verificar slot disponible ────────────────────
       const scheduledAt = `${apptDate.trim()}T${apptTime.trim()}:00`
 
       const { data: slotTaken } = await supabaseAdmin
@@ -216,7 +215,7 @@ ${slotsContext}
       if (slotTaken) {
         const cleanReply = fullReply.replace(/AGENDAR\|.+/, '').trim()
         return NextResponse.json({
-          reply: cleanReply + '\n\n⚠️ Lo siento, ese horario acaba de ser reservado por otro paciente. Estos son los horarios que aún están disponibles:\n\n' +
+          reply: cleanReply + '\n\n⚠️ Lo siento, ese horario acaba de ser reservado. Estos son los horarios disponibles:\n\n' +
             availableSlots
               .filter(d => d.date === apptDate.trim())
               .map(d => `📅 **${d.dayName}:** ${d.slots.join(' - ')}`)
@@ -225,6 +224,7 @@ ${slotsContext}
         })
       }
 
+      // ── 3. Crear cita en appointments ───────────────────
       const { data: appt, error: apptError } = await supabaseAdmin
         .from('appointments')
         .insert({
@@ -247,8 +247,7 @@ ${slotsContext}
         })
       }
 
-      // ── 3. Respuesta de éxito ────────────────────────────
-      const cleanReply = fullReply.replace(/AGENDAR\|.+/, '').trim()
+      // ── 4. Respuesta de éxito ────────────────────────────
       const dateFormatted = new Date(apptDate.trim() + 'T12:00:00').toLocaleDateString('es-CL', {
         weekday: 'long', day: 'numeric', month: 'long',
       })
