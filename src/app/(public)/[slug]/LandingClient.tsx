@@ -52,20 +52,10 @@ function ChatPanel({ page, services, initialMessage, onClose }: {
   const msgBg   = isDark ? '#1e1e38' : '#f3f4f6'
   const textCol = isDark ? '#e5e7eb' : '#111827'
 
-  const [messages, setMessages] = useState<{role: 'user'|'assistant', content: string}[]>(() => {
-    try {
-      const saved = localStorage.getItem(`chat_${page.slug}`)
-      return saved ? JSON.parse(saved) : [{
-        role: 'assistant' as const,
-        content: `¡Hola! 👋 Soy el asistente de **${page.clinic_name}**. ¿En qué puedo ayudarte hoy?`,
-      }]
-    } catch {
-      return [{
-        role: 'assistant' as const,
-        content: `¡Hola! 👋 Soy el asistente de **${page.clinic_name}**. ¿En qué puedo ayudarte hoy?`,
-      }]
-    }
-  })
+  const [messages, setMessages] = useState<{role: 'user'|'assistant', content: string}[]>([{
+    role: 'assistant' as const,
+    content: `¡Hola! 👋 Soy el asistente de **${page.clinic_name}**. ¿En qué puedo ayudarte hoy?`,
+  }])
 
   const [input, setInput]     = useState('')
   const [loading, setLoading] = useState(false)
@@ -119,12 +109,6 @@ function ChatPanel({ page, services, initialMessage, onClose }: {
   useEffect(() => {
     if (!loading) inputRef.current?.focus()
   }, [loading])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(`chat_${page.slug}`, JSON.stringify(messages))
-    } catch {}
-  }, [messages])
 
   async function send(text?: string) {
     const msg = (text ?? input).trim()
