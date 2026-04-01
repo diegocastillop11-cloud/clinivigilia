@@ -101,6 +101,13 @@ function ServiceRow({ service, onToggle }: { service: WebService; onToggle: (id:
         <IconToggle on={service.active} />
       </button>
       <Link
+        href={`/dashboard/gestor-web/servicios/${service.id}/editar`}
+        className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-violet-300 hover:text-violet-600 transition-colors flex-shrink-0"
+      >
+        <IconEdit /> Editar
+      </Link>
+
+      <Link
         href="/dashboard/gestor-web/disponibilidad"
         className="flex items-center gap-1.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl px-3 py-2 hover:border-gray-300 transition-colors"
       >
