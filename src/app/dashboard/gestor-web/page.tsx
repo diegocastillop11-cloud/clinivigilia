@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import toast from 'react-hot-toast'
 import type { WebService, WebPage, GestorWebStats } from '@/types/gestor-web'
 
 // ─── Iconos simples SVG ───────────────────────────────────
@@ -32,8 +33,13 @@ const IconBot = () => (
   </svg>
 )
 const IconEdit = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </svg>
+)
+const IconTrash = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
   </svg>
 )
 const IconExternalLink = () => (
@@ -68,9 +74,13 @@ function StatCard({ icon, label, value, sub, color }: {
 }
 
 // ─── Service Row ──────────────────────────────────────────
-function ServiceRow({ service, onToggle }: { service: WebService; onToggle: (id: string, active: boolean) => void }) {
+function ServiceRow({ service, onToggle, onDelete }: {
+  service: WebService
+  onToggle: (id: string, active: boolean) => void
+  onDelete: (id: string, name: string) => void
+}) {
   return (
-    <div className="flex items-center gap-4 px-5 py-3.5 hover:bg-gray-50 transition-colors group">
+    <div className="flex items-center gap-3 px-5 py-3.5 hover:bg-gray-50 transition-colors">
       <span className="text-2xl w-8 text-center flex-shrink-0">{service.icon}</span>
       <div className="flex-1 min-w-0">
         <p className="font-semibold text-gray-900 text-sm truncate">{service.name}</p>
@@ -84,13 +94,9 @@ function ServiceRow({ service, onToggle }: { service: WebService; onToggle: (id:
       </div>
       <div className="flex items-center gap-1.5 flex-shrink-0">
         {service.ia_context ? (
-          <span className="text-xs bg-violet-50 text-violet-600 rounded-full px-2 py-0.5 font-medium hidden sm:block">
-            IA ✓
-          </span>
+          <span className="text-xs bg-violet-50 text-violet-600 rounded-full px-2 py-0.5 font-medium hidden sm:block">IA ✓</span>
         ) : (
-          <span className="text-xs bg-amber-50 text-amber-600 rounded-full px-2 py-0.5 font-medium hidden sm:block">
-            Sin IA
-          </span>
+          <span className="text-xs bg-amber-50 text-amber-600 rounded-full px-2 py-0.5 font-medium hidden sm:block">Sin IA</span>
         )}
       </div>
       <button
@@ -106,15 +112,20 @@ function ServiceRow({ service, onToggle }: { service: WebService; onToggle: (id:
       >
         <IconEdit /> Editar
       </Link>
-
+      <button
+        onClick={() => onDelete(service.id, service.name)}
+        className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-red-300 hover:text-red-500 transition-colors flex-shrink-0"
+      >
+        <IconTrash /> Eliminar
+      </button>
       <Link
         href="/dashboard/gestor-web/disponibilidad"
-        className="flex items-center gap-1.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl px-3 py-2 hover:border-gray-300 transition-colors"
+        className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:border-gray-300 transition-colors flex-shrink-0"
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
         </svg>
-        Disponibilidad
+        Horarios
       </Link>
     </div>
   )
@@ -137,9 +148,7 @@ export default function GestorWebPage() {
     page_slug: null,
   })
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  useEffect(() => { loadData() }, [])
 
   async function loadData() {
     const { data: { user } } = await supabase.auth.getUser()
@@ -172,13 +181,20 @@ export default function GestorWebPage() {
         page_slug: pageRes.data?.slug ?? null,
       })
     }
-
     setLoading(false)
   }
 
   async function toggleService(id: string, active: boolean) {
     await supabase.from('web_services').update({ active }).eq('id', id)
     setServices(prev => prev.map(s => s.id === id ? { ...s, active } : s))
+  }
+
+  async function deleteService(id: string, name: string) {
+    if (!confirm(`¿Eliminar el servicio "${name}"?\nEsta acción no se puede deshacer.`)) return
+    const { error } = await supabase.from('web_services').delete().eq('id', id)
+    if (error) { toast.error('Error al eliminar'); return }
+    setServices(prev => prev.filter(s => s.id !== id))
+    toast.success(`Servicio "${name}" eliminado`)
   }
 
   async function togglePublish() {
@@ -200,12 +216,14 @@ export default function GestorWebPage() {
     )
   }
 
-  const publicUrl = stats.page_slug ? `${process.env.NEXT_PUBLIC_SITE_URL || 'https://clinivigilia.com'}/${stats.page_slug}` : null
+  const publicUrl = stats.page_slug
+    ? `${process.env.NEXT_PUBLIC_SITE_URL || 'https://clinivigilia.com'}/${stats.page_slug}`
+    : null
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
 
-      {/* ─── Header ───────────────────────────────────────── */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <div>
           <div className="flex items-center gap-2 text-violet-600 mb-1">
@@ -213,26 +231,21 @@ export default function GestorWebPage() {
             <span className="text-sm font-semibold tracking-wide uppercase">Gestor Web</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Tu presencia digital</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Gestiona tu landing, servicios y agenda inteligente con IA
-          </p>
+          <p className="text-sm text-gray-500 mt-0.5">Gestiona tu landing, servicios y agenda inteligente con IA</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {publicUrl && (
-            <a
-              href={publicUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-violet-600 transition-colors border border-gray-200 rounded-xl px-3 py-2 hover:border-violet-200"
-            >
-              <IconExternalLink />
-              Ver sitio
+            <a href={publicUrl} target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-violet-600 transition-colors border border-gray-200 rounded-xl px-3 py-2 hover:border-violet-200">
+              <IconExternalLink /> Ver sitio
             </a>
           )}
-          <Link
-            href="/dashboard/gestor-web/disponibilidad"
-            className="flex items-center gap-1.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl px-3 py-2 hover:border-gray-300 transition-colors"
-          >
+          <Link href="/dashboard/gestor-web/configurar"
+            className="flex items-center gap-1.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl px-3 py-2 hover:border-gray-300 transition-colors">
+            <IconEdit /> Configurar
+          </Link>
+          <Link href="/dashboard/gestor-web/disponibilidad"
+            className="flex items-center gap-1.5 text-sm font-medium text-gray-700 border border-gray-200 rounded-xl px-3 py-2 hover:border-gray-300 transition-colors">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
             </svg>
@@ -245,11 +258,9 @@ export default function GestorWebPage() {
         </div>
       </div>
 
-      {/* ─── Banner publicación ────────────────────────────── */}
+      {/* Banner publicación */}
       <div className={`rounded-2xl border p-5 flex flex-col sm:flex-row sm:items-center gap-4 justify-between transition-colors ${
-        stats.page_published
-          ? 'bg-emerald-50 border-emerald-200'
-          : 'bg-amber-50 border-amber-200'
+        stats.page_published ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'
       }`}>
         <div>
           <div className="flex items-center gap-2">
@@ -258,74 +269,41 @@ export default function GestorWebPage() {
               {stats.page_published ? 'Tu sitio está publicado y visible' : 'Tu sitio está en borrador — no es visible aún'}
             </p>
           </div>
-          {publicUrl && (
-            <p className="text-xs mt-1 text-gray-500 font-mono">{publicUrl}</p>
-          )}
-          {!webPage && (
-            <p className="text-xs mt-1 text-amber-700">Configura tu sitio primero para poder publicarlo</p>
-          )}
+          {publicUrl && <p className="text-xs mt-1 text-gray-500 font-mono">{publicUrl}</p>}
+          {!webPage && <p className="text-xs mt-1 text-amber-700">Configura tu sitio primero para poder publicarlo</p>}
         </div>
         {webPage && (
-          <button
-            onClick={togglePublish}
+          <button onClick={togglePublish}
             className={`flex-shrink-0 px-5 py-2 rounded-xl text-sm font-semibold transition-all ${
               stats.page_published
                 ? 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50'
                 : 'bg-violet-600 text-white hover:bg-violet-700 shadow-md shadow-violet-200'
-            }`}
-          >
+            }`}>
             {stats.page_published ? 'Despublicar' : 'Publicar sitio'}
           </button>
         )}
       </div>
 
-      {/* ─── Stats ────────────────────────────────────────── */}
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard
-          icon={<IconStar />}
-          label="Servicios activos"
-          value={`${stats.active_services}/${stats.total_services}`}
-          sub="en tu catálogo"
-          color="#6366F1"
-        />
-        <StatCard
-          icon={<IconCalendar />}
-          label="Citas este mes"
-          value={stats.appointments_this_month}
-          sub={`${stats.appointments_pending} pendientes`}
-          color="#10B981"
-        />
-        <StatCard
-          icon={<IconBot />}
-          label="Chats IA este mes"
-          value={stats.ia_sessions_this_month}
-          sub="desde tu landing"
-          color="#8B5CF6"
-        />
-        <StatCard
-          icon={<IconGlobe />}
-          label="Estado del sitio"
-          value={stats.page_published ? 'Publicado' : 'Borrador'}
+        <StatCard icon={<IconStar />}     label="Servicios activos"  value={`${stats.active_services}/${stats.total_services}`} sub="en tu catálogo"    color="#6366F1"/>
+        <StatCard icon={<IconCalendar />} label="Citas este mes"     value={stats.appointments_this_month} sub={`${stats.appointments_pending} pendientes`} color="#10B981"/>
+        <StatCard icon={<IconBot />}      label="Chats IA este mes"  value={stats.ia_sessions_this_month}  sub="desde tu landing"  color="#8B5CF6"/>
+        <StatCard icon={<IconGlobe />}    label="Estado del sitio"   value={stats.page_published ? 'Publicado' : 'Borrador'}
           sub={stats.page_slug ? `/${stats.page_slug}` : 'Sin configurar'}
-          color={stats.page_published ? '#10B981' : '#F59E0B'}
-        />
+          color={stats.page_published ? '#10B981' : '#F59E0B'}/>
       </div>
 
-      {/* ─── Servicios ────────────────────────────────────── */}
+      {/* Servicios */}
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div>
             <h2 className="font-bold text-gray-900">Servicios</h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Cada servicio tiene su propio entrenamiento de IA
-            </p>
+            <p className="text-xs text-gray-400 mt-0.5">Cada servicio tiene su propio entrenamiento de IA</p>
           </div>
-          <Link
-            href="/dashboard/gestor-web/servicios/nuevo"
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm shadow-violet-200"
-          >
-            <IconPlus />
-            Nuevo servicio
+          <Link href="/dashboard/gestor-web/servicios/nuevo"
+            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors shadow-sm shadow-violet-200">
+            <IconPlus /> Nuevo servicio
           </Link>
         </div>
 
@@ -333,36 +311,36 @@ export default function GestorWebPage() {
           <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
             <div className="text-5xl mb-4">🩺</div>
             <p className="font-semibold text-gray-700">Aún no tienes servicios</p>
-            <p className="text-sm text-gray-400 mt-1 max-w-xs">
-              Agrega tu primer servicio y entrena a la IA para que lo explique a tus pacientes
-            </p>
-            <Link
-              href="/dashboard/gestor-web/servicios/nuevo"
-              className="mt-5 flex items-center gap-1.5 bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-700 transition-colors"
-            >
-              <IconPlus />
-              Agregar primer servicio
+            <p className="text-sm text-gray-400 mt-1 max-w-xs">Agrega tu primer servicio y entrena a la IA para que lo explique a tus pacientes</p>
+            <Link href="/dashboard/gestor-web/servicios/nuevo"
+              className="mt-5 flex items-center gap-1.5 bg-violet-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-violet-700 transition-colors">
+              <IconPlus /> Agregar primer servicio
             </Link>
           </div>
         ) : (
           <div className="divide-y divide-gray-50">
             {services.map(service => (
-              <ServiceRow key={service.id} service={service} onToggle={toggleService} />
+              <ServiceRow
+                key={service.id}
+                service={service}
+                onToggle={toggleService}
+                onDelete={deleteService}
+              />
             ))}
           </div>
         )}
       </div>
 
-      {/* ─── Próximos pasos ───────────────────────────────── */}
+      {/* Próximos pasos */}
       {(!webPage || services.length === 0) && (
         <div className="bg-gradient-to-br from-violet-50 to-indigo-50 rounded-2xl border border-violet-100 p-6">
           <h3 className="font-bold text-gray-900 mb-4">🚀 Empieza en 3 pasos</h3>
           <div className="space-y-3">
             {[
-              { done: !!webPage, label: 'Configura tu sitio web', sub: 'Nombre, logo, colores y descripción', href: '/dashboard/gestor-web/configurar' },
-              { done: services.length > 0, label: 'Agrega tus servicios', sub: 'Incluye el contexto para entrenar la IA', href: '/dashboard/gestor-web/servicios/nuevo' },
-              { done: false, label: 'Configura tu disponibilidad', sub: 'Define los horarios y bloques agendables', href: '/dashboard/gestor-web/disponibilidad'},
-              { done: stats.page_published, label: 'Publica tu sitio', sub: 'Actívalo para que tus pacientes puedan encontrarte', href: '#' },
+              { done: !!webPage,            label: 'Configura tu sitio web',       sub: 'Nombre, logo, colores y descripción',          href: '/dashboard/gestor-web/configurar' },
+              { done: services.length > 0,  label: 'Agrega tus servicios',         sub: 'Incluye el contexto para entrenar la IA',       href: '/dashboard/gestor-web/servicios/nuevo' },
+              { done: false,                label: 'Configura tu disponibilidad',  sub: 'Define los horarios y bloques agendables',      href: '/dashboard/gestor-web/disponibilidad' },
+              { done: stats.page_published, label: 'Publica tu sitio',             sub: 'Actívalo para que tus pacientes puedan encontrarte', href: '#' },
             ].map((step, i) => (
               <div key={i} className="flex items-center gap-3">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
@@ -371,15 +349,11 @@ export default function GestorWebPage() {
                   {step.done ? '✓' : i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold ${step.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
-                    {step.label}
-                  </p>
+                  <p className={`text-sm font-semibold ${step.done ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{step.label}</p>
                   <p className="text-xs text-gray-400">{step.sub}</p>
                 </div>
                 {!step.done && step.href !== '#' && (
-                  <Link href={step.href} className="text-xs font-medium text-violet-600 hover:text-violet-700 flex-shrink-0">
-                    Ir →
-                  </Link>
+                  <Link href={step.href} className="text-xs font-medium text-violet-600 hover:text-violet-700 flex-shrink-0">Ir →</Link>
                 )}
               </div>
             ))}
