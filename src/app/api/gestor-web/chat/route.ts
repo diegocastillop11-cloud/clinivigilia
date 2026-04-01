@@ -203,8 +203,6 @@ ${slotsContext}
       }
 
       // ── 2. Verificar slot disponible ────────────────────
-      // Limpiar fecha — la IA a veces manda "jueves 2 de abril" en vez de "2026-04-02"
-      // Buscar la fecha correcta en availableSlots usando el texto del día
       let cleanDate = apptDate.trim()
       if (cleanDate.includes(' ') && !cleanDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
         const matched = availableSlots.find(s =>
@@ -212,7 +210,18 @@ ${slotsContext}
         )
         if (matched) cleanDate = matched.date
       }
+
+      // Forzar año correcto si la fecha quedó en el pasado
+      if (cleanDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const currentYear = new Date().getFullYear()
+        const dateYear = parseInt(cleanDate.slice(0, 4))
+        if (dateYear < currentYear) {
+          cleanDate = cleanDate.replace(/^\d{4}/, currentYear.toString())
+        }
+      }
+
       const scheduledAt = `${cleanDate}T${apptTime.trim()}:00`
+
       const { data: slotTaken } = await supabaseAdmin
         .from('appointments')
         .select('id')
