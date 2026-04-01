@@ -19,7 +19,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="flex min-h-screen" style={{ background: 'var(--bg-main)' }}>
       <Sidebar doctor={doctor} enabledModules={enabledModules} />
       <main className="flex-1 min-h-screen md:ml-[240px] pt-16 md:pt-0">
-        {children}
+        <div className="p-6 md:p-8">
+          {children}
+        </div>
       </main>
     </div>
   )
