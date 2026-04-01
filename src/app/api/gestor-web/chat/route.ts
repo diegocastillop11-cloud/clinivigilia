@@ -94,7 +94,7 @@ ${slotsContext}
 1. Cuando el paciente quiera agendar, explica el servicio BREVEMENTE (2 oraciones máximo)
 2. Muestra los horarios disponibles inmediatamente
 3. Cuando elija día y hora, pide los datos en este orden:
-   a. Nombre completo
+   a. Nombre completo (nombre Y apellido)
    b. RUT (formato: 12.345.678-9)
    c. Email
    d. Teléfono
@@ -131,14 +131,23 @@ ${slotsContext}
       /AGENDAR\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)/
     )
 
+    function formatRut(rut: string): string {
+      const clean = rut.replace(/[^0-9kK]/g, '')
+      if (clean.length < 2) return rut
+      const body = clean.slice(0, -1)
+      const dv   = clean.slice(-1).toUpperCase()
+      const formatted = body.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+      return `${formatted}-${dv}`
+    }
+
     if (bookingMatch) {
       const [, patientName, patientRut, patientEmail, patientPhone, apptDate, apptTime, serviceName, durationStr] = bookingMatch
 
       const nameParts   = patientName.trim().split(' ')
       const firstName   = nameParts[0] || patientName.trim()
-      const lastName    = nameParts.slice(1).join(' ') || '-'
+      const lastName    = nameParts.slice(1).join(' ') || 'Sin apellido'
       const durationMin = parseInt(durationStr) || 30
-      const cleanRut    = patientRut.trim()
+      const cleanRut = formatRut(patientRut.trim())
 
       const matchedService = services.find((s: any) =>
         s.name.toLowerCase().includes(serviceName.trim().toLowerCase()) ||
