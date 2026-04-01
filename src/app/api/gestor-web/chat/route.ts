@@ -109,7 +109,7 @@ ${slotsContext}
    d. Teléfono
 4. Muestra un resumen con todos los datos y pregunta: "¿Confirmas estos datos? Responde **sí** para agendar."
 5. SOLO cuando el paciente responda "sí", "confirmo", "correcto", "ok" o similar, incluye al final de tu respuesta (en línea separada):
-   AGENDAR|nombre|rut|email|telefono|fecha|hora|servicio_nombre|duracion_min
+   AGENDAR|nombre|rut|email|telefono|YYYY-MM-DD|HH:MM|servicio_nombre|duracion_min
 
 ## REGLAS IMPORTANTES:
 - Sé MUY conciso. Máximo 3-4 oraciones por respuesta
@@ -121,7 +121,8 @@ ${slotsContext}
 - Si el paciente dice que los datos están mal, corrígelos y vuelve a pedir confirmación
 - Habla siempre en español, tono cálido y profesional
 - Los horarios mostrados arriba son los ÚNICOS disponibles en este momento. Si un paciente elige un horario que no aparece en la lista, indícale que ese horario ya no está disponible y muéstrale los que sí están.
-- NUNCA ofrezcas horarios que no estén en la lista de HORARIOS DISPONIBLES de este prompt`
+- NUNCA ofrezcas horarios que no estén en la lista de HORARIOS DISPONIBLES de este prompt
+- La fecha en AGENDAR|... SIEMPRE debe ser en formato YYYY-MM-DD (ej: 2026-04-02), NUNCA en texto`
 
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
@@ -202,8 +203,16 @@ ${slotsContext}
       }
 
       // ── 2. Verificar slot disponible ────────────────────
-      const scheduledAt = `${apptDate.trim()}T${apptTime.trim()}:00`
-
+      // Limpiar fecha — la IA a veces manda "jueves 2 de abril" en vez de "2026-04-02"
+      // Buscar la fecha correcta en availableSlots usando el texto del día
+      let cleanDate = apptDate.trim()
+      if (cleanDate.includes(' ') && !cleanDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        const matched = availableSlots.find(s =>
+          s.dayName.toLowerCase().includes(cleanDate.toLowerCase().split(' ').slice(-2).join(' '))
+        )
+        if (matched) cleanDate = matched.date
+      }
+      const scheduledAt = `${cleanDate}T${apptTime.trim()}:00`
       const { data: slotTaken } = await supabaseAdmin
         .from('appointments')
         .select('id')
