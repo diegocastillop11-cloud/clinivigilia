@@ -64,7 +64,7 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="animate-in max-w-2xl">
+    <div className="animate-in max-w-2xl px-2">
       <div className="mb-6">
         <h1 className="font-display text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Configuración</h1>
         <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>Gestiona tu perfil y preferencias</p>
