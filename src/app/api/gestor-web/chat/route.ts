@@ -31,15 +31,24 @@ export async function POST(req: Request) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     ) as any
 
-    // ─── Disponibilidad real ─────────────────────────────
+    // ─── Disponibilidad real (por fecha específica) ──────
     const today = new Date()
     const jsToOur = (d: number) => d === 0 ? 6 : d - 1
+    const DAY_NAMES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+
+    // Obtener fechas de los próximos 14 días
+    const dateStrings = Array.from({ length: 14 }, (_, i) => {
+      const d = new Date(today)
+      d.setDate(today.getDate() + i)
+      return d.toISOString().split('T')[0]
+    })
 
     const { data: availability } = await supabase
-      .from('web_availability')
+      .from('web_availability_dates')
       .select('*')
       .eq('doctor_id', doctor_id)
       .eq('active', true)
+      .in('date', dateStrings)
 
     const { data: bookedAppts } = await supabaseAdmin
       .from('appointments')
@@ -48,16 +57,11 @@ export async function POST(req: Request) {
       .in('status', ['programada', 'confirmada'])
       .gte('scheduled_at', today.toISOString())
 
-    // Generar slots disponibles próximos 14 días
+    // Construir slots disponibles desde fechas específicas
     const availableSlots: { date: string; dayName: string; slots: string[] }[] = []
 
-    for (let i = 0; i < 14; i++) {
-      const date = new Date(today)
-      date.setDate(today.getDate() + i)
-      const ourDay = jsToOur(date.getDay())
-      const dateStr = date.toISOString().split('T')[0]
-
-      const dayAvail = availability?.find((a: any) => a.day_of_week === ourDay)
+    for (const dateStr of dateStrings) {
+      const dayAvail = availability?.find((a: any) => a.date === dateStr)
       if (!dayAvail?.enabled_slots?.length) continue
 
       const bookedTimes = bookedAppts
@@ -69,7 +73,8 @@ export async function POST(req: Request) {
       )
       if (!freeSlots.length) continue
 
-      const DAY_NAMES = ['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo']
+      const date = new Date(dateStr + 'T12:00:00')
+      const ourDay = jsToOur(date.getDay())
       const dateFormatted = date.toLocaleDateString('es-CL', { day: 'numeric', month: 'long' })
 
       availableSlots.push({

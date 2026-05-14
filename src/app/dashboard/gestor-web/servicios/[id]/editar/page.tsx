@@ -80,6 +80,7 @@ export default function EditarServicioPage() {
   const [step, setStep]       = useState(1)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving]   = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [enriching, setEnriching] = useState(false)
   const [enriched, setEnriched]   = useState('')
   const [keywordInput, setKeywordInput] = useState('')
@@ -87,6 +88,7 @@ export default function EditarServicioPage() {
   const [form, setForm] = useState({
     name:          '',
     icon:          '🩺',
+    image_url:     '',
     short_desc:    '',
     long_desc:     '',
     price_from:    '',
@@ -114,6 +116,7 @@ export default function EditarServicioPage() {
       setForm({
         name:           data.name || '',
         icon:           data.icon || '🩺',
+        image_url:      data.image_url || '',
         short_desc:     data.short_desc || '',
         long_desc:      data.long_desc || '',
         price_from:     data.price_from?.toString() || '',
@@ -140,6 +143,23 @@ export default function EditarServicioPage() {
   }, [serviceId])
 
   const set = (k: string, v: unknown) => setForm(p => ({ ...p, [k]: v }))
+
+  // ─── Subir imagen ─────────────────────────────────────
+  async function uploadImage(file: File) {
+    setUploading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setUploading(false); return }
+
+    const ext = file.name.split('.').pop()
+    const path = `services/${user.id}/${Date.now()}.${ext}`
+    const { error } = await supabase.storage.from('business-assets').upload(path, file, { upsert: true })
+
+    if (!error) {
+      const { data: { publicUrl } } = supabase.storage.from('business-assets').getPublicUrl(path)
+      set('image_url', publicUrl)
+    }
+    setUploading(false)
+  }
 
   // ─── Keywords ────────────────────────────────────────
   function addKeyword() {
@@ -190,6 +210,7 @@ export default function EditarServicioPage() {
       .update({
         name:           form.name,
         icon:           form.icon,
+        image_url:      form.image_url || null,
         short_desc:     form.short_desc || null,
         long_desc:      form.long_desc  || null,
         price_from:     form.price_from ? parseFloat(form.price_from) : null,
@@ -279,6 +300,35 @@ export default function EditarServicioPage() {
       {step === 1 && (
         <div className="space-y-6">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
+
+            <Field label="Imagen del servicio" hint="Foto del servicio que aparecerá en tu landing. Recomendado: 800×600px.">
+              <div className="flex items-start gap-4">
+                <div className="w-32 h-24 rounded-xl border-2 border-dashed border-gray-200 flex items-center justify-center overflow-hidden flex-shrink-0 bg-gray-50">
+                  {form.image_url ? (
+                    <img src={form.image_url} alt="Imagen del servicio" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl">{form.icon}</span>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className={`cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${uploading ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-violet-50 text-violet-700 hover:bg-violet-100'}`}>
+                    {uploading ? (
+                      <><div className="w-3.5 h-3.5 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" /> Subiendo...</>
+                    ) : (
+                      <>📷 {form.image_url ? 'Cambiar imagen' : 'Subir imagen'}</>
+                    )}
+                    <input type="file" className="hidden" accept="image/*" disabled={uploading}
+                      onChange={e => { if (e.target.files?.[0]) uploadImage(e.target.files[0]) }} />
+                  </label>
+                  {form.image_url && (
+                    <button onClick={() => set('image_url', '')} className="text-xs text-red-400 hover:text-red-600 text-left">
+                      × Eliminar imagen
+                    </button>
+                  )}
+                  <p className="text-xs text-gray-400">JPG, PNG o WebP</p>
+                </div>
+              </div>
+            </Field>
 
             <Field label="Ícono del servicio">
               <div className="flex flex-wrap gap-2">

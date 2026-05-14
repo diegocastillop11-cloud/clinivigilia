@@ -17,8 +17,8 @@ const ALL_NAV_ITEMS = [
   { label: 'Pacientes',    href: '/pacientes',             icon: Users,           module: 'patients',     section: 'main' },
   { label: 'Citas',        href: '/citas',                 icon: Calendar,        module: 'appointments', section: 'main', badge: 'citas' },
   { label: 'Seguimiento',  href: '/seguimiento',           icon: ClipboardList,   module: 'followups',    section: 'main' },
-  { label: 'Gestor Web',   href: '/dashboard/gestor-web',  icon: Globe,           module: 'gestor_web',   section: 'main', badge: 'NEW' },
-  { label: 'Asistente IA', href: '/ia',                    icon: Brain,           module: 'ai',           section: 'main', badge: 'IA' },
+  { label: 'Gestor Web',   href: '/dashboard/gestor-web',  icon: Globe,           module: 'gestor_web',   section: 'main' },
+  { label: 'Asistente IA', href: '/ia',                    icon: Brain,           module: 'ai',           section: 'main' },
   { label: 'Reportes',     href: '/reportes',              icon: BarChart2,       module: 'reports',      section: 'main' },
   { label: 'Correos',      href: '/correos',               icon: Mail,            module: 'emails',       section: 'main' },
   { label: 'Configuración',href: '/dashboard/settings',    icon: Settings,        module: null,           section: 'system' },
@@ -161,21 +161,6 @@ export default function Sidebar({ doctor, enabledModules }: SidebarProps) {
                   </span>
                 )}
 
-                {/* Badge NEW para Gestor Web */}
-                {(item as any).badge === 'NEW' && (
-                  <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
-                    style={{ background: 'linear-gradient(135deg, #818cf8, #6366f1)' }}>
-                    NEW
-                  </span>
-                )}
-
-                {/* Badge IA */}
-                {(item as any).badge === 'IA' && (
-                  <span className="ml-auto text-[9px] font-bold px-1.5 py-0.5 rounded-full text-white"
-                    style={{ background: 'linear-gradient(135deg, #818cf8, #6366f1)' }}>
-                    IA
-                  </span>
-                )}
               </div>
             </Link>
           )
