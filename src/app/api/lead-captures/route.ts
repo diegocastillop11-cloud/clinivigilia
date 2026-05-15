@@ -11,9 +11,9 @@ function createServiceClient() {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { slug, nombre, email, telefono, preocupacion, tiempo_problema, quiere_info } = body
+    const { slug, nombre, email, telefono, answers } = body
 
-    if (!slug || !nombre || !email || !telefono || !preocupacion || !tiempo_problema) {
+    if (!slug || !nombre || !email || !telefono) {
       return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
@@ -21,13 +21,24 @@ export async function POST(req: NextRequest) {
 
     const { data: leadMagnet, error: lmError } = await supabase
       .from('lead_magnets')
-      .select('id, pdf_path')
+      .select('id, pdf_path, questions')
       .eq('slug', slug)
       .eq('is_active', true)
       .maybeSingle()
 
     if (lmError || !leadMagnet) {
       return NextResponse.json({ error: 'Formulario no encontrado' }, { status: 404 })
+    }
+
+    // Validar preguntas requeridas
+    const questions: any[] = leadMagnet.questions ?? []
+    for (const q of questions) {
+      if (q.required && !answers?.[q.id]?.trim()) {
+        return NextResponse.json(
+          { error: `La pregunta "${q.label}" es obligatoria` },
+          { status: 400 }
+        )
+      }
     }
 
     const { error: insertError } = await supabase
@@ -37,9 +48,7 @@ export async function POST(req: NextRequest) {
         nombre: nombre.trim(),
         email: email.trim().toLowerCase(),
         telefono: telefono.trim(),
-        preocupacion,
-        tiempo_problema,
-        quiere_info: quiere_info === true,
+        answers: answers ?? {},
       })
 
     if (insertError) {
@@ -53,7 +62,7 @@ export async function POST(req: NextRequest) {
 
     const { data: signed, error: signedError } = await supabase.storage
       .from('lead-pdfs')
-      .createSignedUrl(leadMagnet.pdf_path, 7 * 24 * 60 * 60) // 7 días
+      .createSignedUrl(leadMagnet.pdf_path, 7 * 24 * 60 * 60)
 
     if (signedError || !signed) {
       console.error('signed URL error:', signedError)

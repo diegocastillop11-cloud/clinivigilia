@@ -35,7 +35,7 @@ export default async function GuiaPage(
 
   const { data: leadMagnet } = await supabase
     .from('lead_magnets')
-    .select('title, description')
+    .select('title, description, questions')
     .eq('slug', slug)
     .eq('is_active', true)
     .maybeSingle()
@@ -47,6 +47,7 @@ export default async function GuiaPage(
       slug={slug}
       title={leadMagnet.title}
       description={leadMagnet.description}
+      questions={leadMagnet.questions ?? []}
     />
   )
 }
