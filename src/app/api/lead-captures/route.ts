@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
         email: email.trim().toLowerCase(),
         telefono: telefono.trim(),
         answers: answers ?? {},
+        preocupacion: '',
       })
 
     if (insertError) {
