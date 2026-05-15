@@ -43,15 +43,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const answerFields = answers && typeof answers === 'object' ? answers : {}
+    const insertPayload = {
+      lead_magnet_id: leadMagnet.id,
+      nombre: nombre.trim(),
+      email: email.trim().toLowerCase(),
+      telefono: telefono.trim(),
+      answers: answers ?? {},
+      ...answerFields,
+    }
+
     const { error: insertError } = await supabase
       .from('lead_captures')
-      .insert({
-        lead_magnet_id: leadMagnet.id,
-        nombre: nombre.trim(),
-        email: email.trim().toLowerCase(),
-        telefono: telefono.trim(),
-        answers: answers ?? {},
-      })
+      .insert(insertPayload)
 
     if (insertError) {
       console.error('lead_captures insert error:', insertError, { slug, nombre, email, telefono, answers })
