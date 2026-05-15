@@ -70,9 +70,32 @@ function ChatPanel({ page, services, initialMessage, onClose }: {
   const [input, setInput]     = useState('')
   const [loading, setLoading] = useState(false)
   const [booked, setBooked]   = useState(false)
-  const sentRef   = useRef(false)
-  const bottomRef = useRef<HTMLDivElement>(null)
-  const inputRef  = useRef<HTMLTextAreaElement>(null)
+  const sentRef    = useRef(false)
+  const bottomRef  = useRef<HTMLDivElement>(null)
+  const inputRef   = useRef<HTMLTextAreaElement>(null)
+
+  const DATA_TEMPLATE = 'Nombre: \nRUT: \nEmail: \nTeléfono: '
+
+  function needsPatientData(text: string) {
+    return (text.includes('Nombre completo') || text.includes('nombre completo')) &&
+      text.includes('RUT') && text.includes('Email')
+  }
+
+  // Auto-llenar plantilla cuando la IA pide los datos
+  useEffect(() => {
+    if (loading) return
+    const last = messages[messages.length - 1]
+    if (last?.role === 'assistant' && needsPatientData(last.content)) {
+      setInput(DATA_TEMPLATE)
+      setTimeout(() => {
+        const ta = inputRef.current
+        if (!ta) return
+        const pos = 'Nombre: '.length
+        ta.focus()
+        ta.setSelectionRange(pos, pos)
+      }, 80)
+    }
+  }, [messages, loading])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -308,52 +331,78 @@ function ChatPanel({ page, services, initialMessage, onClose }: {
         )}
 
         {/* Input */}
-        <div style={{ padding:'10px 14px 16px', flexShrink:0, borderTop:`1px solid ${isDark?'#1e1e38':'#f1f5f9'}` }}>
-          <div style={{
-            display:'flex', gap:8, alignItems:'flex-end',
-            background:isDark?'#1e1e38':'#f8fafc',
-            borderRadius:14, padding:'8px 8px 8px 14px',
-            border:`1.5px solid ${primary}28`,
-          }}>
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder={initialMessage ? 'Presiona Enter para enviar...' : 'Escribe tu consulta aquí...'}
-              rows={1}
-              disabled={booked}
-              style={{
-                flex:1, border:'none', outline:'none', resize:'none',
-                background:'transparent', color: booked ? '#94a3b8' : textCol,
-                fontSize:14, lineHeight:1.5, maxHeight:100, fontFamily:'inherit',
-              }}
-            />
-            <button onClick={() => send()} disabled={!input.trim()||loading||booked} style={{
-              width:38, height:38, borderRadius:10, flexShrink:0,
-              background:!input.trim()||loading||booked ? '#e2e8f0' : `linear-gradient(135deg,${primary},${page.accent_color})`,
-              border:'none', cursor:!input.trim()||loading||booked ? 'default':'pointer',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              color:!input.trim()||loading||booked ? '#94a3b8':'#fff', transition:'all 0.2s',
-            }}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-            </button>
-            <button onClick={() => {
-              localStorage.removeItem(`chat_${page.slug}`)
-              setMessages([{ role: 'assistant', content: `¡Hola! 👋 Soy el asistente de **${page.clinic_name}**. ¿En qué puedo ayudarte hoy?` }])
-            }} style={{
-              width: 32, height: 32, borderRadius: 8,
-              background: 'rgba(255,255,255,0.15)', border: 'none', cursor: 'pointer',
-              color: '#fff', fontSize: 11, fontWeight: 700,
-            }} title="Nueva conversación">
-              🗑️
-            </button>
-
-          </div>
-          <p style={{ fontSize:11, color:isDark?'#334155':'#cbd5e1', textAlign:'center', marginTop:6 }}>
-            Enter para enviar · Shift+Enter nueva línea
-          </p>
-        </div>
+        {(() => {
+          const isTemplate = input === DATA_TEMPLATE || (input.startsWith('Nombre:') && input.includes('RUT:') && input.includes('Email:') && input.includes('Teléfono:'))
+          return (
+            <div style={{ padding: isTemplate ? '12px 14px 16px' : '10px 14px 16px', flexShrink:0, borderTop:`1px solid ${isDark?'#1e1e38':'#f1f5f9'}` }}>
+              {isTemplate && (
+                <div style={{
+                  marginBottom: 8, padding: '7px 12px', borderRadius: 10,
+                  background: `${primary}15`, border: `1px solid ${primary}30`,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}>
+                  <span style={{ fontSize: 13 }}>📋</span>
+                  <p style={{ fontSize: 12, color: primary, fontWeight: 600 }}>
+                    Completa tus datos y presiona Enviar
+                  </p>
+                </div>
+              )}
+              <div style={{
+                display:'flex', gap:8, alignItems:'flex-end',
+                background: isTemplate ? (isDark ? '#1a1a30' : '#fafaff') : (isDark?'#1e1e38':'#f8fafc'),
+                borderRadius:14, padding: isTemplate ? '12px 10px 10px 14px' : '8px 8px 8px 14px',
+                border: isTemplate ? `2px solid ${primary}50` : `1.5px solid ${primary}28`,
+                transition: 'all 0.2s',
+              }}>
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  onKeyDown={handleKey}
+                  placeholder={initialMessage ? 'Presiona Enter para enviar...' : 'Escribe tu consulta aquí...'}
+                  rows={isTemplate ? 4 : 1}
+                  disabled={booked}
+                  style={{
+                    flex:1, border:'none', outline:'none', resize:'none',
+                    background:'transparent', color: booked ? '#94a3b8' : textCol,
+                    fontSize: isTemplate ? 15 : 14,
+                    lineHeight: isTemplate ? 2 : 1.5,
+                    maxHeight: isTemplate ? 'none' : 100,
+                    fontFamily: isTemplate ? 'inherit' : 'inherit',
+                    fontWeight: isTemplate ? 500 : 400,
+                  }}
+                />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: isTemplate ? 'flex-end' : 'center' }}>
+                  <button onClick={() => send()} disabled={!input.trim()||loading||booked} style={{
+                    width:38, height:38, borderRadius:10, flexShrink:0,
+                    background:!input.trim()||loading||booked ? '#e2e8f0' : `linear-gradient(135deg,${primary},${page.accent_color})`,
+                    border:'none', cursor:!input.trim()||loading||booked ? 'default':'pointer',
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    color:!input.trim()||loading||booked ? '#94a3b8':'#fff', transition:'all 0.2s',
+                    boxShadow: (!input.trim()||loading||booked) ? 'none' : `0 4px 12px ${primary}40`,
+                  }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                  </button>
+                  <button onClick={() => {
+                    sessionStorage.removeItem(`chat_${page.slug}`)
+                    setMessages([{ role: 'assistant', content: `¡Hola! 👋 Soy el asistente de **${page.clinic_name}**. ¿En qué puedo ayudarte hoy?` }])
+                    setInput('')
+                  }} style={{
+                    width: 38, height: 32, borderRadius: 8,
+                    background: isDark ? '#1e1e38' : '#f1f5f9', border: 'none', cursor: 'pointer',
+                    color: isDark ? '#475569' : '#94a3b8', fontSize: 15,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }} title="Nueva conversación">
+                    🗑️
+                  </button>
+                </div>
+              </div>
+              <p style={{ fontSize:11, color:isDark?'#334155':'#cbd5e1', textAlign:'center', marginTop:6 }}>
+                {isTemplate ? 'Completa cada campo y presiona Enviar' : 'Enter para enviar · Shift+Enter nueva línea'}
+              </p>
+            </div>
+          )
+        })()}
       </div>
     </>
   )
