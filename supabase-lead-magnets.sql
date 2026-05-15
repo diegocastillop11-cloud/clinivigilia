@@ -56,6 +56,7 @@ CREATE POLICY "lead_captures_owner_select" ON public.lead_captures
 -- ─────────────────────────────────────────────────────────────
 -- ALTER TABLE public.lead_magnets  ADD COLUMN IF NOT EXISTS questions JSONB NOT NULL DEFAULT '[]';
 -- ALTER TABLE public.lead_captures ADD COLUMN IF NOT EXISTS answers   JSONB NOT NULL DEFAULT '{}';
+-- ALTER TABLE public.lead_captures ALTER COLUMN IF EXISTS preocupacion DROP NOT NULL;
 
 -- ─────────────────────────────────────────────────────────────
 -- STORAGE — Bucket para PDFs
