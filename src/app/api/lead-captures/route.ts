@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
         telefono: telefono.trim(),
         answers: answers ?? {},
         preocupacion: '',
+        tiempo_problema: '',
       })
 
     if (insertError) {
