@@ -1,0 +1,68 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+function createServiceClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const { slug, nombre, email, telefono, preocupacion, tiempo_problema, quiere_info } = body
+
+    if (!slug || !nombre || !email || !telefono || !preocupacion || !tiempo_problema) {
+      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
+    }
+
+    const supabase = createServiceClient()
+
+    const { data: leadMagnet, error: lmError } = await supabase
+      .from('lead_magnets')
+      .select('id, pdf_path')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .maybeSingle()
+
+    if (lmError || !leadMagnet) {
+      return NextResponse.json({ error: 'Formulario no encontrado' }, { status: 404 })
+    }
+
+    const { error: insertError } = await supabase
+      .from('lead_captures')
+      .insert({
+        lead_magnet_id: leadMagnet.id,
+        nombre: nombre.trim(),
+        email: email.trim().toLowerCase(),
+        telefono: telefono.trim(),
+        preocupacion,
+        tiempo_problema,
+        quiere_info: quiere_info === true,
+      })
+
+    if (insertError) {
+      console.error('lead_captures insert error:', insertError)
+      return NextResponse.json({ error: 'Error al guardar datos' }, { status: 500 })
+    }
+
+    if (!leadMagnet.pdf_path) {
+      return NextResponse.json({ error: 'El PDF aún no está disponible' }, { status: 422 })
+    }
+
+    const { data: signed, error: signedError } = await supabase.storage
+      .from('lead-pdfs')
+      .createSignedUrl(leadMagnet.pdf_path, 7 * 24 * 60 * 60) // 7 días
+
+    if (signedError || !signed) {
+      console.error('signed URL error:', signedError)
+      return NextResponse.json({ error: 'Error al generar enlace de descarga' }, { status: 500 })
+    }
+
+    return NextResponse.json({ download_url: signed.signedUrl })
+  } catch (err) {
+    console.error('lead-captures API error:', err)
+    return NextResponse.json({ error: 'Error interno' }, { status: 500 })
+  }
+}

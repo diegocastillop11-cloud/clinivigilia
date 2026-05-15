@@ -7,7 +7,7 @@ import { useTheme } from '@/context/ThemeContext'
 import type { Doctor } from '@/types/database'
 import {
   LayoutDashboard, Users, Calendar, ClipboardList,
-  Settings, LogOut, Stethoscope, Brain, BarChart2, Mail, Menu, X, Globe
+  Settings, LogOut, Stethoscope, Brain, BarChart2, Mail, Menu, X, Globe, FileDown
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useState, useEffect } from 'react'
@@ -18,6 +18,7 @@ const ALL_NAV_ITEMS = [
   { label: 'Citas',        href: '/citas',                 icon: Calendar,        module: 'appointments', section: 'main', badge: 'citas' },
   { label: 'Seguimiento',  href: '/seguimiento',           icon: ClipboardList,   module: 'followups',    section: 'main' },
   { label: 'Gestor Web',   href: '/dashboard/gestor-web',  icon: Globe,           module: 'gestor_web',   section: 'main' },
+  { label: 'Lead Magnets', href: '/dashboard/lead-magnets', icon: FileDown,        module: null,           section: 'main' },
   { label: 'Asistente IA', href: '/ia',                    icon: Brain,           module: 'ai',           section: 'main' },
   { label: 'Reportes',     href: '/reportes',              icon: BarChart2,       module: 'reports',      section: 'main' },
   { label: 'Correos',      href: '/correos',               icon: Mail,            module: 'emails',       section: 'main' },
