@@ -181,6 +181,7 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
                             <p className="text-[10px] font-semibold text-violet-600 mt-0.5">🏥 {match[1].trim()}</p>
                           ) : null
                         })()}
+                      </div>
                       <span className={`status-dot ${appt.status} text-[10px]`}>
                         {appt.status}
                       </span>
