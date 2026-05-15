@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 function createServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  )
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Supabase URL o clave no configurada')
+  }
+  return createClient(supabaseUrl, supabaseKey)
 }
 
 export async function POST(req: NextRequest) {
@@ -52,8 +54,8 @@ export async function POST(req: NextRequest) {
       })
 
     if (insertError) {
-      console.error('lead_captures insert error:', insertError)
-      return NextResponse.json({ error: 'Error al guardar datos' }, { status: 500 })
+      console.error('lead_captures insert error:', insertError, { slug, nombre, email, telefono, answers })
+      return NextResponse.json({ error: insertError.message || 'Error al guardar datos' }, { status: 500 })
     }
 
     if (!leadMagnet.pdf_path) {

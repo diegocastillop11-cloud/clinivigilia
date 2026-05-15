@@ -202,7 +202,9 @@ export default function LeadMagnetsPage() {
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
   const [creating, setCreating] = useState(false)
-  const [editingQuestions, setEditingQuestions] = useState<LeadMagnet | null>(null)
+  const [editingLeadMagnet, setEditingLeadMagnet] = useState<LeadMagnet | null>(null)
+  const [draftTitle, setDraftTitle] = useState('')
+  const [draftDescription, setDraftDescription] = useState('')
   const [draftQuestions, setDraftQuestions] = useState<Question[]>([])
   const [savingQuestions, setSavingQuestions] = useState(false)
   const [selectedForCaptures, setSelectedForCaptures] = useState<LeadMagnet | null>(null)
@@ -277,12 +279,15 @@ export default function LeadMagnetsPage() {
   }
 
   function openQuestionEditor(lm: LeadMagnet) {
-    setEditingQuestions(lm)
+    setEditingLeadMagnet(lm)
+    setDraftTitle(lm.title)
+    setDraftDescription(lm.description ?? '')
     setDraftQuestions(lm.questions ?? [])
   }
 
   async function saveQuestions() {
-    if (!editingQuestions) return
+    if (!editingLeadMagnet) return
+    if (!draftTitle.trim()) { toast.error('El título no puede quedar vacío.'); return }
     for (const q of draftQuestions) {
       if (!q.label.trim()) { toast.error('Hay preguntas sin texto.'); return }
       if (q.type === 'radio' && q.options.filter(o => o.trim()).length < 2) {
@@ -292,15 +297,20 @@ export default function LeadMagnetsPage() {
     setSavingQuestions(true)
     const { error } = await supabase
       .from('lead_magnets')
-      .update({ questions: draftQuestions })
-      .eq('id', editingQuestions.id)
+      .update({ title: draftTitle.trim(), description: draftDescription.trim() || null, questions: draftQuestions })
+      .eq('id', editingLeadMagnet.id)
 
     if (!error) {
-      toast.success('Preguntas guardadas')
-      setLeadMagnets(prev => prev.map(m => m.id === editingQuestions!.id ? { ...m, questions: draftQuestions } : m))
-      setEditingQuestions(null)
+      toast.success('Lead magnet actualizado')
+      setLeadMagnets(prev => prev.map(m => m.id === editingLeadMagnet.id ? {
+        ...m,
+        title: draftTitle.trim(),
+        description: draftDescription.trim() || null,
+        questions: draftQuestions,
+      } : m))
+      setEditingLeadMagnet(null)
     } else {
-      toast.error('Error al guardar preguntas')
+      toast.error('Error al guardar cambios')
     }
     setSavingQuestions(false)
   }
@@ -355,6 +365,35 @@ export default function LeadMagnetsPage() {
       .order('created_at', { ascending: false })
     setCaptures(data ?? [])
     setLoadingCaptures(false)
+  }
+
+  function downloadCsv() {
+    if (!selectedForCaptures) return
+    const questions = selectedForCaptures.questions ?? []
+    const headers = ['Nombre', 'Email', 'Teléfono', 'Fecha', ...questions.map(q => q.label)]
+    const rows = [
+      headers,
+      ...captures.map(capture => [
+        capture.nombre,
+        capture.email,
+        capture.telefono,
+        new Date(capture.created_at).toLocaleDateString('es-CL', { day: '2-digit', month: 'short', year: 'numeric' }),
+        ...questions.map(q => capture.answers?.[q.id] ?? ''),
+      ]),
+    ]
+
+    const csv = rows
+      .map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(','))
+      .join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `${selectedForCaptures.slug || 'reporte-leads'}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
   }
 
   function copyUrl(slug: string) {
@@ -453,7 +492,7 @@ export default function LeadMagnetsPage() {
       )}
 
       {/* ── Modal editor de preguntas ────────────────────────── */}
-      {editingQuestions && (
+      {editingLeadMagnet && (
         <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-8 overflow-y-auto"
           style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}>
           <div className="w-full max-w-2xl rounded-2xl overflow-hidden mb-10"
@@ -463,29 +502,41 @@ export default function LeadMagnetsPage() {
             <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border-color)' }}>
               <div>
                 <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
-                  Preguntas del formulario
+                  Editar formulario
                 </h2>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>{editingQuestions.title}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>Cabecera, descripción y preguntas</p>
               </div>
-              <button onClick={() => setEditingQuestions(null)} style={{ color: 'var(--text-muted)' }}>
+              <button onClick={() => setEditingLeadMagnet(null)} style={{ color: 'var(--text-muted)' }}>
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
 
             {/* Nota sobre campos fijos */}
-            <div className="mx-5 mt-4 px-4 py-2.5 rounded-xl text-xs"
-              style={{ background: 'rgba(99,102,241,0.06)', color: '#6366f1' }}>
-              Los campos <strong>Nombre, Email y Teléfono</strong> se incluyen siempre de forma automática. Aquí agregas tus preguntas adicionales.
+            <div className="px-5 pt-4 pb-2 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>Título *</label>
+                <input value={draftTitle} onChange={e => setDraftTitle(e.target.value)}
+                  className={inputCls} style={inputSt} />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>Descripción</label>
+                <textarea value={draftDescription} onChange={e => setDraftDescription(e.target.value)}
+                  rows={3} className={inputCls + ' resize-none'} style={{ ...inputSt, fontFamily: 'inherit' }} />
+              </div>
+              <div className="mx-5 mt-1 px-4 py-2.5 rounded-xl text-xs"
+                style={{ background: 'rgba(99,102,241,0.06)', color: '#6366f1' }}>
+                Los campos <strong>Nombre, Email y Teléfono</strong> se incluyen siempre de forma automática. Aquí agregas tus preguntas adicionales.
+              </div>
             </div>
 
             {/* Editor */}
-            <div className="p-5">
+            <div className="p-5 pt-0">
               <QuestionEditor questions={draftQuestions} onChange={setDraftQuestions} />
             </div>
 
             {/* Footer */}
             <div className="flex justify-end gap-3 px-5 pb-5">
-              <button onClick={() => setEditingQuestions(null)}
+              <button onClick={() => setEditingLeadMagnet(null)}
                 className="px-5 py-2.5 rounded-xl text-sm font-semibold border"
                 style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)', background: 'transparent' }}>
                 Cancelar
@@ -567,20 +618,20 @@ export default function LeadMagnetsPage() {
 
                   {/* Acciones */}
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* Editar preguntas */}
+                    {/* Editar encabezado */}
                     <button onClick={() => openQuestionEditor(lm)}
                       className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg"
                       style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.2)' }}>
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      Editar preguntas
+                      Editar encabezado
                     </button>
 
-                    {/* Ver leads */}
+                    {/* Ver reporte */}
                     <button onClick={() => loadCaptures(lm)}
                       className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg"
                       style={{ background: 'var(--bg-main)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }}>
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                      {lm.capture_count ?? 0} leads
+                      Ver reporte ({lm.capture_count ?? 0})
                     </button>
 
                     {/* Subir PDF */}
@@ -631,16 +682,23 @@ export default function LeadMagnetsPage() {
             <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: 'var(--border-color)' }}>
               <div>
                 <h2 className="text-base font-bold" style={{ color: 'var(--text-primary)' }}>
-                  Leads — {selectedForCaptures.title}
+                  Reporte de leads — {selectedForCaptures.title}
                 </h2>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {captures.length} contacto{captures.length !== 1 ? 's' : ''} capturado{captures.length !== 1 ? 's' : ''}
+                  {captures.length} contacto{captures.length !== 1 ? 's' : ''} capturado{captures.length !== 1 ? 's' : ''}. Usa estos datos para promociones y seguimiento.
                 </p>
               </div>
-              <button onClick={() => { setSelectedForCaptures(null); setCaptures([]); setExpandedCapture(null) }}
-                style={{ color: 'var(--text-muted)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              </button>
+              <div className="flex items-center gap-2">
+                <button onClick={downloadCsv}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg"
+                  style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.2)' }}>
+                  Descargar CSV
+                </button>
+                <button onClick={() => { setSelectedForCaptures(null); setCaptures([]); setExpandedCapture(null) }}
+                  style={{ color: 'var(--text-muted)' }}>
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
             </div>
 
             {loadingCaptures ? (
