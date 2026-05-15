@@ -214,6 +214,9 @@ export default function LeadMagnetsPage() {
   const [uploading, setUploading] = useState<string | null>(null)
   const [siteUrl, setSiteUrl] = useState('')
   const [newForm, setNewForm] = useState({ title: '', description: '', slug: '' })
+  const [showPromotion, setShowPromotion] = useState(false)
+  const [promotionForm, setPromotionForm] = useState({ nombre: '', descuento: '', descripcion: '' })
+  const [sendingPromotion, setSendingPromotion] = useState(false)
 
   useEffect(() => {
     setSiteUrl(window.location.origin)
@@ -394,6 +397,37 @@ export default function LeadMagnetsPage() {
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
+  }
+
+  async function sendPromotion() {
+    if (!selectedForCaptures || !promotionForm.nombre.trim() || !promotionForm.descuento.trim()) {
+      toast.error('Completa el nombre y porcentaje de descuento')
+      return
+    }
+
+    setSendingPromotion(true)
+    try {
+      const res = await fetch('/api/lead-magnets/send-promotion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_magnet_id: selectedForCaptures.id,
+          nombre_promocion: promotionForm.nombre.trim(),
+          descuento: promotionForm.descuento.trim(),
+          descripcion: promotionForm.descripcion.trim(),
+          emails: captures.map(c => ({ email: c.email, nombre: c.nombre })),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { toast.error(data.error || 'Error al enviar'); return }
+      toast.success(`Promoción enviada a ${data.sent ?? captures.length} contactos`)
+      setPromotionForm({ nombre: '', descuento: '', descripcion: '' })
+      setShowPromotion(false)
+    } catch {
+      toast.error('Error de conexión')
+    } finally {
+      setSendingPromotion(false)
+    }
   }
 
   function copyUrl(slug: string) {
@@ -689,6 +723,12 @@ export default function LeadMagnetsPage() {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <button onClick={() => setShowPromotion(true)}
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5"
+                  style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.2)' }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66v1.68c0 .55.35 1.08.89 1.32l1.96 1.02c.54.28 1.2.28 1.74 0l1.96-1.02c.54-.24.89-.77.89-1.32v-1.68"/><path d="M6 9h12v5H6z"/></svg>
+                  Enviar promoción
+                </button>
                 <button onClick={downloadCsv}
                   className="text-xs font-semibold px-3 py-1.5 rounded-lg"
                   style={{ background: 'rgba(99,102,241,0.1)', color: '#6366f1', border: '1px solid rgba(99,102,241,0.2)' }}>
@@ -757,6 +797,63 @@ export default function LeadMagnetsPage() {
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal enviar promoción ───────────────────────────── */}
+      {showPromotion && selectedForCaptures && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)' }}>
+          <div className="w-full max-w-md rounded-2xl p-6"
+            style={{ background: 'var(--bg-card)', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
+            <div className="flex items-center justify-between mb-5">
+              <h2 className="text-lg font-bold" style={{ color: 'var(--text-primary)' }}>Enviar promoción</h2>
+              <button onClick={() => setShowPromotion(false)} style={{ color: 'var(--text-muted)' }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>Nombre del producto/servicio *</label>
+                <input value={promotionForm.nombre} onChange={e => setPromotionForm(f => ({ ...f, nombre: e.target.value }))}
+                  placeholder="Ej: Tratamiento capilar premium"
+                  className={inputCls} style={inputSt} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>Porcentaje de descuento (%) *</label>
+                <input value={promotionForm.descuento} onChange={e => setPromotionForm(f => ({ ...f, descuento: e.target.value }))}
+                  type="number" min="0" max="100" placeholder="Ej: 20"
+                  className={inputCls} style={inputSt} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>Descripción (opcional)</label>
+                <textarea value={promotionForm.descripcion} onChange={e => setPromotionForm(f => ({ ...f, descripcion: e.target.value }))}
+                  placeholder="Detalle adicional de la promoción, condiciones, vigencia, etc."
+                  rows={3} className={inputCls + ' resize-none'} style={{ ...inputSt, fontFamily: 'inherit' }} />
+              </div>
+
+              <div className="px-3 py-2.5 rounded-lg text-xs"
+                style={{ background: 'rgba(34,197,94,0.06)', color: '#16a34a' }}>
+                📧 Se enviará a <strong>{captures.length}</strong> contacto{captures.length !== 1 ? 's' : ''} de este formulario.
+              </div>
+
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setShowPromotion(false)}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold border"
+                  style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)', background: 'transparent' }}>
+                  Cancelar
+                </button>
+                <button onClick={sendPromotion} disabled={sendingPromotion}
+                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold"
+                  style={{ background: sendingPromotion ? '#d1d5db' : 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
+                  {sendingPromotion ? 'Enviando...' : 'Enviar a todos'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
