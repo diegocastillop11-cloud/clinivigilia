@@ -175,7 +175,12 @@ export default async function PatientDetailPage({ params }: { params: Promise<{ 
                           {format(parseISO(appt.scheduled_at), "d MMM yyyy, HH:mm", { locale: es })}
                         </p>
                         <p className="text-[10px] text-slate-400 capitalize">{appt.type.replace('_', ' ')}</p>
-                      </div>
+                        {(() => {
+                          const match = appt.notes?.match(/— Servicio: (.+)$/)
+                          return match?.[1] ? (
+                            <p className="text-[10px] font-semibold text-violet-600 mt-0.5">🏥 {match[1].trim()}</p>
+                          ) : null
+                        })()}
                       <span className={`status-dot ${appt.status} text-[10px]`}>
                         {appt.status}
                       </span>

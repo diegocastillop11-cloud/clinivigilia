@@ -21,6 +21,12 @@ const SPECIALTY_LABELS: Record<string, string> = {
   medicina_general: 'Medicina General',
 }
 
+function extractService(notes: string | null): string | null {
+  if (!notes) return null
+  const match = notes.match(/— Servicio: (.+)$/)
+  return match?.[1]?.trim() || null
+}
+
 function formatDate(str: string) {
   const d = parseISO(str)
   if (isToday(d)) return `Hoy · ${format(d, 'HH:mm')}`
@@ -116,6 +122,11 @@ export default async function CitasPage({ searchParams }: PageProps) {
                       <p className="text-xs text-slate-400 mt-0.5">
                         {TYPE_LABELS[appt.type]} · {SPECIALTY_LABELS[p?.specialty] ?? ''} · {appt.duration_min} min
                       </p>
+                      {extractService(appt.notes) && (
+                        <p className="text-xs font-semibold text-violet-600 mt-0.5">
+                          🏥 {extractService(appt.notes)}
+                        </p>
+                      )}
                     </div>
                     {/* Time */}
                     <div className="text-right flex-shrink-0">
@@ -157,6 +168,9 @@ export default async function CitasPage({ searchParams }: PageProps) {
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-700">{p?.first_name} {p?.last_name}</p>
                       <p className="text-xs text-slate-400">{TYPE_LABELS[appt.type]} · {format(parseISO(appt.scheduled_at), 'HH:mm')}</p>
+                      {extractService(appt.notes) && (
+                        <p className="text-xs font-medium text-violet-500 mt-0.5">🏥 {extractService(appt.notes)}</p>
+                      )}
                     </div>
                     <span className={`badge text-xs
                       ${appt.status === 'completada' ? 'badge-alta' :
