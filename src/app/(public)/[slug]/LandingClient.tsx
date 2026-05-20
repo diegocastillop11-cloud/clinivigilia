@@ -74,11 +74,11 @@ function ChatPanel({ page, services, initialMessage, onClose }: {
   const bottomRef  = useRef<HTMLDivElement>(null)
   const inputRef   = useRef<HTMLTextAreaElement>(null)
 
-  const DATA_TEMPLATE = 'Nombre: \nRUT: \nEmail: \nTeléfono: '
+  const DATA_TEMPLATE = 'Nombre: \nEmail: \nTeléfono: '
 
   function needsPatientData(text: string) {
     return (text.includes('Nombre completo') || text.includes('nombre completo')) &&
-      text.includes('RUT') && text.includes('Email')
+      text.includes('Email') && text.includes('Teléfono')
   }
 
   // Auto-llenar plantilla cuando la IA pide los datos
@@ -332,7 +332,7 @@ function ChatPanel({ page, services, initialMessage, onClose }: {
 
         {/* Input */}
         {(() => {
-          const isTemplate = input === DATA_TEMPLATE || (input.startsWith('Nombre:') && input.includes('RUT:') && input.includes('Email:') && input.includes('Teléfono:'))
+          const isTemplate = input === DATA_TEMPLATE || (input.startsWith('Nombre:') && input.includes('Email:') && input.includes('Teléfono:'))
           return (
             <div style={{ padding: isTemplate ? '12px 14px 16px' : '10px 14px 16px', flexShrink:0, borderTop:`1px solid ${isDark?'#1e1e38':'#f1f5f9'}` }}>
               {isTemplate && (

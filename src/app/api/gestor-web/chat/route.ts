@@ -110,20 +110,18 @@ ${slotsContext}
 3. Cuando elija día y hora, pide TODOS los datos en UN SOLO mensaje:
    "Para confirmar tu cita necesito los siguientes datos:
    • Nombre completo (nombre y apellido)
-   • RUT (formato: 12.345.678-9)
    • Email
    • Teléfono"
    Espera que el paciente los envíe todos juntos antes de continuar. Si no los envia todos juntos pidele lo que falta.
 4. Muestra un resumen con todos los datos y pregunta: "¿Confirmas estos datos? Responde **sí** para agendar."
 5. SOLO cuando el paciente responda "sí", "confirmo", "correcto", "ok" o similar, incluye al final de tu respuesta (en línea separada):
-   AGENDAR|nombre|rut|email|telefono|YYYY-MM-DD|HH:MM|servicio_nombre|duracion_min
+   AGENDAR|nombre|email|telefono|YYYY-MM-DD|HH:MM|servicio_nombre|duracion_min
 
 ## REGLAS IMPORTANTES:
 - Sé MUY conciso. Máximo 3-4 oraciones por respuesta
 - NO repitas información ya dada en mensajes anteriores
 - NO mandes al paciente a buscar botones — TÚ gestionas el agendamiento
 - Muestra horarios así: "📅 **Lunes 30 de marzo:** 9:00 - 10:00 - 11:00"
-- El RUT es OBLIGATORIO. Si no lo da, pídelo amablemente
 - NUNCA incluyas AGENDAR|... antes de que el paciente confirme con "sí"
 - Si el paciente dice que los datos están mal, corrígelos y vuelve a pedir confirmación
 - Habla siempre en español, tono cálido y profesional
@@ -145,37 +143,36 @@ ${slotsContext}
 
     // ─── Detectar comando de agendamiento ────────────────
     const bookingMatch = fullReply.match(
-      /AGENDAR\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)/
+      /AGENDAR\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)\|([^|]+)/
     )
 
     if (bookingMatch) {
-      const [, patientName, patientRut, patientEmail, patientPhone, apptDate, apptTime, serviceName, durationStr] = bookingMatch
+      const [, patientName, patientEmail, patientPhone, apptDate, apptTime, serviceName, durationStr] = bookingMatch
 
       const nameParts   = patientName.trim().split(' ')
       const firstName   = nameParts[0] || patientName.trim()
       const lastName    = nameParts.slice(1).join(' ') || 'Sin apellido'
       const durationMin = parseInt(durationStr) || 30
-      const cleanRut    = formatRut(patientRut.trim())
 
       const matchedService = services.find((s: any) =>
         s.name.toLowerCase().includes(serviceName.trim().toLowerCase()) ||
         serviceName.trim().toLowerCase().includes(s.name.toLowerCase())
       )
 
-      // ── 1. Buscar o crear paciente por RUT ──────────────
+      // ── 1. Buscar o crear paciente por email ─────────────
       let patientId: string | null = null
+      const cleanEmail = patientEmail.trim().toLowerCase()
 
       const { data: existingPatient } = await supabaseAdmin
         .from('patients')
         .select('id')
         .eq('doctor_id', doctor_id)
-        .eq('rut', cleanRut)
+        .eq('email', cleanEmail)
         .maybeSingle()
 
       if (existingPatient) {
         patientId = existingPatient.id
         await supabaseAdmin.from('patients').update({
-          email: patientEmail.trim() || null,
           phone: patientPhone.trim() || null,
         }).eq('id', patientId)
       } else {
@@ -185,8 +182,7 @@ ${slotsContext}
             doctor_id,
             first_name: firstName,
             last_name:  lastName,
-            rut:        cleanRut,
-            email:      patientEmail.trim() || null,
+            email:      cleanEmail || null,
             phone:      patientPhone.trim() || null,
             status:     'activo',
             specialty:  'medicina_general',
@@ -273,12 +269,15 @@ ${slotsContext}
       }
 
       // ── 4. Respuesta de éxito ────────────────────────────
-      const dateFormatted = new Date(apptDate.trim() + 'T12:00:00').toLocaleDateString('es-CL', {
+      // Usar new Date(y,m,d) para evitar problemas de timezone
+      const [cy, cm, cd] = cleanDate.split('-').map(Number)
+      const dateObj = new Date(cy, cm - 1, cd)
+      const dateFormatted = dateObj.toLocaleDateString('es-CL', {
         weekday: 'long', day: 'numeric', month: 'long',
       })
 
       return NextResponse.json({
-        reply: `✅ **¡Cita agendada exitosamente!**\n\n📋 **Resumen:**\n• **Paciente:** ${patientName.trim()}\n• **RUT:** ${cleanRut}\n• **Servicio:** ${serviceName.trim()}\n• **Fecha:** ${dateFormatted}\n• **Hora:** ${apptTime.trim()}\n\nTe esperamos. Si necesitas cancelar o reagendar contáctanos. ¡Hasta pronto! 👋`,
+        reply: `✅ **¡Cita agendada exitosamente!**\n\n📋 **Resumen:**\n• **Paciente:** ${patientName.trim()}\n• **Servicio:** ${serviceName.trim()}\n• **Fecha:** ${dateFormatted}\n• **Hora:** ${apptTime.trim()}\n\nTe esperamos. Si necesitas cancelar o reagendar contáctanos. ¡Hasta pronto! 👋`,
         booked: true,
         appointment: appt,
       })
