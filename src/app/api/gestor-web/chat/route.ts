@@ -43,7 +43,7 @@ export async function POST(req: Request) {
       return d.toISOString().split('T')[0]
     })
 
-    const { data: availability } = await supabase
+    const { data: availability } = await supabaseAdmin
       .from('web_availability_dates')
       .select('*')
       .eq('doctor_id', doctor_id)
