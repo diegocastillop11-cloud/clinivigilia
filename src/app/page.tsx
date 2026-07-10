@@ -127,7 +127,13 @@ export default function Landing() {
     const onScroll = () => setScrolled(window.scrollY > 20)
     window.addEventListener('scroll', onScroll)
     createClient().from('landing_config').select('*').eq('id', 'main').single()
-      .then(({ data }) => { if (data) setCfg(prev => ({ ...prev, ...data })) })
+      .then(({ data }) => {
+        if (!data) return
+        const overrides = Object.fromEntries(
+          Object.entries(data).filter(([, v]) => v !== null && v !== undefined && v !== '')
+        )
+        setCfg(prev => ({ ...prev, ...overrides }))
+      })
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
