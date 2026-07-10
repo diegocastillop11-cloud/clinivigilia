@@ -30,6 +30,8 @@ const config: Config = {
         'fade-in': 'fadeIn 0.4s ease forwards',
         'slide-in': 'slideIn 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards',
         'pulse-dot': 'pulseDot 1.5s ease-in-out infinite',
+        'cosmic-spin': 'cosmicSpin 3s linear infinite',
+        'cosmic-spin-slow': 'cosmicSpinSlow 5s linear infinite',
       },
       keyframes: {
         fadeIn: {
@@ -43,6 +45,14 @@ const config: Config = {
         pulseDot: {
           '0%, 100%': { opacity: '1' },
           '50%': { opacity: '0.4' },
+        },
+        cosmicSpin: {
+          from: { transform: 'rotate(0deg)' },
+          to: { transform: 'rotate(360deg)' },
+        },
+        cosmicSpinSlow: {
+          from: { transform: 'rotate(0deg)' },
+          to: { transform: 'rotate(-360deg)' },
         },
       },
     },

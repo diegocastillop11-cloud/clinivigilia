@@ -125,6 +125,60 @@ NEXT_PUBLIC_SITE_URL
 - Notificaciones: `react-hot-toast` (importar `toast` de `'react-hot-toast'`).
 - Iconos: `lucide-react`.
 
+## Herramientas gstack disponibles
+
+Suite de skills instalada en `~/.claude/skills/gstack`. Invocar con `/nombre` cuando aplique.
+
+**Planificación y revisión de planes**
+- `/spec` — convierte una idea vaga en spec ejecutable
+- `/office-hours` — brainstorming de producto estilo YC
+- `/autoplan` — pipeline de revisión automática (CEO → Design → Eng → DX) con voces duales (Claude + Codex)
+- `/plan-ceo-review` `/plan-design-review` `/plan-eng-review` `/plan-devex-review` — revisión de plan por área, interactiva
+- `/plan-tune` — ajusta sensibilidad de preguntas del flujo
+
+**Código y debugging**
+- `/investigate` — debugging sistemático con root cause
+- `/review` — revisión de PR antes de mergear
+- `/health` — dashboard de calidad de código
+- `/devex-review` — auditoría de developer experience en vivo
+
+**QA y navegador**
+- `/qa` / `/qa-only` — testing de la app en navegador headless (con fixes o solo reporte)
+- `/browse` — navegador headless rápido para QA
+- `/scrape` — extraer datos de una página web
+- `/setup-browser-cookies` — importar cookies del navegador real
+
+**Diseño**
+- `/design-consultation` — sistema de diseño completo (estética, tipografía, color)
+- `/design-html` — genera HTML/CSS de producción
+- `/design-review` — ojo de diseñador: inconsistencias visuales
+- `/design-shotgun` — genera variantes de diseño en paralelo
+
+**Ship y deploy**
+- `/ship` — flujo completo: tests, review, changelog, commit, push, PR
+- `/land-and-deploy` — merge + deploy
+- `/canary` — monitoreo post-deploy
+- `/setup-deploy` — configura settings de deployment
+
+**Seguridad**
+- `/cso` — modo Chief Security Officer
+- `/careful` / `/guard` — guardrails para comandos destructivos / edición limitada a un directorio
+
+**Contexto y memoria**
+- `/context-save` / `/context-restore` — guarda y restaura contexto de trabajo
+- `/learn` — gestiona aprendizajes del proyecto
+- `/setup-gbrain` / `/sync-gbrain` — memoria semántica del repo (gbrain)
+- `/retro` — retrospectiva semanal de ingeniería
+
+**Otros**
+- `/diagram` — descripción en inglés → diagrama editable
+- `/document-generate` / `/document-release` — generación y actualización de docs
+- `/make-pdf` — markdown → PDF
+- `/benchmark` / `/benchmark-models` — detección de regresiones de performance
+- `/codex` — wrapper del CLI de OpenAI Codex
+- `/pair-agent` — parea un agente remoto con el navegador
+- `/gstack-upgrade` — actualiza gstack a la última versión
+
 ## Lo que falta por completar
 - Envío masivo de emails (Resend bulk) para recordatorios automáticos
 - Vista de reportes con filtros avanzados y gráficos
