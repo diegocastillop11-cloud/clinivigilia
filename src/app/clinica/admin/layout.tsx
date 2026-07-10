@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ClinicAdminSidebar from '@/components/clinica/ClinicAdminSidebar'
+import IdleLogout from '@/components/auth/IdleLogout'
 
 export default async function ClinicAdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -24,6 +25,7 @@ export default async function ClinicAdminLayout({ children }: { children: React.
 
   return (
     <div className="flex min-h-screen" style={{ background: '#0f172a' }}>
+      <IdleLogout />
       <ClinicAdminSidebar clinic={clinic} doctor={doctor} />
       <main className="ml-[260px] flex-1 p-8 min-h-screen">
         {children}

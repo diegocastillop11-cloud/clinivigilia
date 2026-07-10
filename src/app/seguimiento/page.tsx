@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
+import IdleLogout from '@/components/auth/IdleLogout'
 import Link from 'next/link'
 import { ClipboardList, AlertTriangle, Bell, Calendar, Send } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
@@ -62,6 +63,7 @@ export default async function SeguimientoPage() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+      <IdleLogout />
       <Sidebar doctor={doctor} enabledModules={enabledModules} />
       <main className="ml-[240px] flex-1 p-8 min-h-screen animate-in">
 

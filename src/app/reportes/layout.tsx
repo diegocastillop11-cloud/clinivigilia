@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
+import IdleLogout from '@/components/auth/IdleLogout'
 
 export default async function ReportesLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -17,6 +18,7 @@ export default async function ReportesLayout({ children }: { children: React.Rea
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg-main)' }}>
+      <IdleLogout />
       <Sidebar doctor={doctor} enabledModules={enabledModules} />
       <main className="flex-1 min-h-screen md:ml-[240px]">
         {children}

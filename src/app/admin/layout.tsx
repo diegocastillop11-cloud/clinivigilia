@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AdminSidebar from '@/components/admin/AdminSidebar'
+import IdleLogout from '@/components/auth/IdleLogout'
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -17,6 +18,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // El middleware ya garantiza que solo el superadmin llega acá
   return (
     <div className="flex min-h-screen" style={{ background: '#0f172a' }}>
+      <IdleLogout />
       <AdminSidebar doctor={doctor} />
       <main className="ml-[240px] flex-1 p-8 min-h-screen" style={{ background: '#0f172a' }}>
         {children}

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/layout/Sidebar'
+import IdleLogout from '@/components/auth/IdleLogout'
 
 export default async function IALayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -23,6 +24,7 @@ export default async function IALayout({ children }: { children: React.ReactNode
 
   return (
     <div className="flex min-h-screen" style={{ background: 'var(--bg-main)' }} suppressHydrationWarning>
+      <IdleLogout />
       <Sidebar doctor={doctor} enabledModules={enabledModules} />
       <main className="ml-[240px] flex-1 flex flex-col min-h-screen" suppressHydrationWarning>
         {children}
