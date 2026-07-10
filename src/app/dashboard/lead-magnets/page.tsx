@@ -215,13 +215,31 @@ export default function LeadMagnetsPage() {
   const [siteUrl, setSiteUrl] = useState('')
   const [newForm, setNewForm] = useState({ title: '', description: '', slug: '' })
   const [showPromotion, setShowPromotion] = useState(false)
-  const [promotionForm, setPromotionForm] = useState({ nombre: '', descuento: '', descripcion: '' })
+  const [promotionForm, setPromotionForm] = useState({ servicio_id: '', descuento: '', descripcion: '' })
   const [sendingPromotion, setSendingPromotion] = useState(false)
+  const [webServices, setWebServices] = useState<Array<{id: string; name: string}>>([])
+  const [selectedContacts, setSelectedContacts] = useState<Set<string>>(new Set())
+  const [loadingServices, setLoadingServices] = useState(false)
 
   useEffect(() => {
     setSiteUrl(window.location.origin)
     loadLeadMagnets()
+    loadWebServices()
   }, [])
+
+  async function loadWebServices() {
+    setLoadingServices(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { setLoadingServices(false); return }
+    const { data } = await supabase
+      .from('web_services')
+      .select('id, name')
+      .eq('doctor_id', user.id)
+      .eq('active', true)
+      .order('name')
+    setWebServices(data ?? [])
+    setLoadingServices(false)
+  }
 
   async function loadLeadMagnets() {
     setLoading(true)
@@ -367,7 +385,22 @@ export default function LeadMagnetsPage() {
       .eq('lead_magnet_id', lm.id)
       .order('created_at', { ascending: false })
     setCaptures(data ?? [])
+    setSelectedContacts(new Set((data ?? []).map(c => c.id)))
     setLoadingCaptures(false)
+  }
+
+  function toggleContact(id: string) {
+    setSelectedContacts(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleAllContacts() {
+    setSelectedContacts(prev =>
+      prev.size === captures.length ? new Set() : new Set(captures.map(c => c.id))
+    )
   }
 
   function downloadCsv() {
@@ -400,8 +433,15 @@ export default function LeadMagnetsPage() {
   }
 
   async function sendPromotion() {
-    if (!selectedForCaptures || !promotionForm.nombre.trim() || !promotionForm.descuento.trim()) {
-      toast.error('Completa el nombre y porcentaje de descuento')
+    const service = webServices.find(s => s.id === promotionForm.servicio_id)
+    const recipients = captures.filter(c => selectedContacts.has(c.id))
+
+    if (!selectedForCaptures || !service || !promotionForm.descuento.trim()) {
+      toast.error('Selecciona un servicio y completa el porcentaje de descuento')
+      return
+    }
+    if (recipients.length === 0) {
+      toast.error('Selecciona al menos un contacto')
       return
     }
 
@@ -412,16 +452,16 @@ export default function LeadMagnetsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           lead_magnet_id: selectedForCaptures.id,
-          nombre_promocion: promotionForm.nombre.trim(),
+          nombre_promocion: service.name,
           descuento: promotionForm.descuento.trim(),
           descripcion: promotionForm.descripcion.trim(),
-          emails: captures.map(c => ({ email: c.email, nombre: c.nombre })),
+          emails: recipients.map(c => ({ email: c.email, nombre: c.nombre })),
         }),
       })
       const data = await res.json()
       if (!res.ok) { toast.error(data.error || 'Error al enviar'); return }
-      toast.success(`Promoción enviada a ${data.sent ?? captures.length} contactos`)
-      setPromotionForm({ nombre: '', descuento: '', descripcion: '' })
+      toast.success(`Promoción enviada a ${data.sent ?? recipients.length} contactos`)
+      setPromotionForm({ servicio_id: '', descuento: '', descripcion: '' })
       setShowPromotion(false)
     } catch {
       toast.error('Error de conexión')
@@ -719,7 +759,8 @@ export default function LeadMagnetsPage() {
                   Reporte de leads — {selectedForCaptures.title}
                 </h2>
                 <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
-                  {captures.length} contacto{captures.length !== 1 ? 's' : ''} capturado{captures.length !== 1 ? 's' : ''}. Usa estos datos para promociones y seguimiento.
+                  {captures.length} contacto{captures.length !== 1 ? 's' : ''} capturado{captures.length !== 1 ? 's' : ''}
+                  {captures.length > 0 && ` · ${selectedContacts.size} seleccionado${selectedContacts.size !== 1 ? 's' : ''}`}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -753,12 +794,22 @@ export default function LeadMagnetsPage() {
               </div>
             ) : (
               <div className="divide-y" style={{ borderColor: 'var(--border-color)' }}>
+                <div className="flex items-center gap-2 px-5 py-2.5" style={{ background: 'var(--bg-main)' }}>
+                  <input type="checkbox" className="w-3.5 h-3.5 flex-shrink-0"
+                    checked={captures.length > 0 && selectedContacts.size === captures.length}
+                    onChange={toggleAllContacts} />
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>Seleccionar todos</span>
+                </div>
                 {captures.map(c => (
                   <div key={c.id}>
                     {/* Fila principal */}
-                    <button
+                    <div
                       onClick={() => setExpandedCapture(expandedCapture === c.id ? null : c.id)}
-                      className="w-full flex items-center gap-4 px-5 py-3.5 text-left hover:opacity-80 transition-opacity">
+                      className="w-full flex items-center gap-4 px-5 py-3.5 text-left hover:opacity-80 transition-opacity cursor-pointer">
+                      <input type="checkbox" className="w-3.5 h-3.5 flex-shrink-0"
+                        checked={selectedContacts.has(c.id)}
+                        onClick={e => e.stopPropagation()}
+                        onChange={() => toggleContact(c.id)} />
                       <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                         style={{ background: 'linear-gradient(135deg,#6366f1,#8b5cf6)' }}>
                         {c.nombre.charAt(0).toUpperCase()}
@@ -774,7 +825,7 @@ export default function LeadMagnetsPage() {
                         style={{ color: 'var(--text-muted)', transform: expandedCapture === c.id ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', flexShrink: 0 }}>
                         <polyline points="6 9 12 15 18 9"/>
                       </svg>
-                    </button>
+                    </div>
 
                     {/* Respuestas expandidas */}
                     {expandedCapture === c.id && (
@@ -816,10 +867,20 @@ export default function LeadMagnetsPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>Nombre del producto/servicio *</label>
-                <input value={promotionForm.nombre} onChange={e => setPromotionForm(f => ({ ...f, nombre: e.target.value }))}
-                  placeholder="Ej: Tratamiento capilar premium"
-                  className={inputCls} style={inputSt} />
+                <label className="block text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'var(--text-muted)' }}>Servicio *</label>
+                {loadingServices ? (
+                  <div className="text-sm px-1 py-2" style={{ color: 'var(--text-muted)' }}>Cargando servicios...</div>
+                ) : webServices.length === 0 ? (
+                  <p className="text-xs px-3 py-2.5 rounded-lg" style={{ background: 'rgba(245,158,11,0.08)', color: '#d97706' }}>
+                    No tienes servicios activos configurados. Ve a Gestor Web → Servicios para crear uno.
+                  </p>
+                ) : (
+                  <select value={promotionForm.servicio_id} onChange={e => setPromotionForm(f => ({ ...f, servicio_id: e.target.value }))}
+                    className={inputCls} style={inputSt}>
+                    <option value="">Selecciona un servicio</option>
+                    {webServices.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                )}
               </div>
 
               <div>
@@ -838,7 +899,7 @@ export default function LeadMagnetsPage() {
 
               <div className="px-3 py-2.5 rounded-lg text-xs"
                 style={{ background: 'rgba(34,197,94,0.06)', color: '#16a34a' }}>
-                📧 Se enviará a <strong>{captures.length}</strong> contacto{captures.length !== 1 ? 's' : ''} de este formulario.
+                📧 Se enviará a <strong>{selectedContacts.size}</strong> contacto{selectedContacts.size !== 1 ? 's' : ''} seleccionado{selectedContacts.size !== 1 ? 's' : ''}.
               </div>
 
               <div className="flex gap-3 pt-1">
@@ -847,10 +908,10 @@ export default function LeadMagnetsPage() {
                   style={{ borderColor: 'var(--border-color)', color: 'var(--text-muted)', background: 'transparent' }}>
                   Cancelar
                 </button>
-                <button onClick={sendPromotion} disabled={sendingPromotion}
-                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold"
+                <button onClick={sendPromotion} disabled={sendingPromotion || selectedContacts.size === 0}
+                  className="flex-1 py-2.5 rounded-xl text-white text-sm font-semibold disabled:opacity-50"
                   style={{ background: sendingPromotion ? '#d1d5db' : 'linear-gradient(135deg,#22c55e,#16a34a)' }}>
-                  {sendingPromotion ? 'Enviando...' : 'Enviar a todos'}
+                  {sendingPromotion ? 'Enviando...' : `Enviar a ${selectedContacts.size}`}
                 </button>
               </div>
             </div>
