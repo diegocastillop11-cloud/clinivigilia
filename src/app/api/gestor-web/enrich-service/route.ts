@@ -39,7 +39,7 @@ El texto enriquecido debe incluir:
 Responde SOLO con el texto enriquecido, en español, sin introducción ni comentarios adicionales. Sé claro, empático y profesional.`
 
     const message = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-5',
       max_tokens: 1500,
       tools: [
         {

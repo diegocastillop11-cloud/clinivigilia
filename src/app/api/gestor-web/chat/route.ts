@@ -130,7 +130,7 @@ ${slotsContext}
 - La fecha en AGENDAR|... SIEMPRE debe ser en formato YYYY-MM-DD (ej: 2026-04-02), NUNCA en texto`
 
     const response = await anthropic.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-5',
       max_tokens: 600,
       system: systemPrompt,
       messages: messages.map((m: any) => ({ role: m.role, content: m.content })),
