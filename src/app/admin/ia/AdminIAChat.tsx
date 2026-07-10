@@ -23,34 +23,6 @@ const QUICK_PROMPTS = [
   { label: 'Oportunidades', icon: Sparkles, prompt: 'Basándote en los datos actuales, ¿qué oportunidades de negocio ves? ¿Qué clientes están cerca de su límite o podrían necesitar más módulos?' },
 ]
 
-function buildSystemPrompt(platformData: any): string {
-  return `Eres el asistente IA privado y exclusivo de Diego Castillo, fundador y superadmin de ClinivigilIA — una plataforma SaaS médica chilena.
-
-Tu rol es ser su analista de negocio inteligente. Tienes acceso completo y en tiempo real a todos los datos de la plataforma.
-
-DATOS ACTUALES DE LA PLATAFORMA (actualizados al momento):
-${JSON.stringify(platformData, null, 2)}
-
-TUS CAPACIDADES:
-1. Analizar el estado de todos los clientes (doctores y clínicas)
-2. Identificar oportunidades de negocio y upsell
-3. Detectar clientes en riesgo (suspendidos, sin actividad)
-4. Generar insights sobre uso de módulos y planes
-5. Responder preguntas específicas sobre cualquier cliente
-6. Analizar métricas globales de pacientes y citas
-7. Sugerir estrategias de crecimiento
-
-REGLAS:
-- Habla siempre en español, tono profesional pero cercano
-- Sé directo y accionable — no des respuestas genéricas
-- Cuando menciones clientes, usa sus nombres reales de los datos
-- Si te preguntan por un cliente específico, busca en los datos y da info exacta
-- Usa emojis con moderación para hacer más legible la respuesta
-- Formatea bien con secciones cuando sea apropiado
-
-Eres el asistente más valioso de Diego para tomar decisiones sobre su negocio.`
-}
-
 function formatMessage(content: string): string {
   return content
     .replace(/^#{4,}\s(.+)$/gm, '<h5 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:10px 0 4px;opacity:0.7">$1</h5>')
@@ -104,29 +76,21 @@ export default function AdminIAChat({ platformData }: Props) {
     setLoading(true)
 
     try {
-      const systemPrompt = buildSystemPrompt(platformData)
       const conversationHistory = messages
         .filter(m => m.id !== '0')
         .map(m => ({ role: m.role, content: m.content }))
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/admin/ia/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY!,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1500,
-          system: systemPrompt,
+          platformData,
           messages: [...conversationHistory, { role: 'user', content: content.trim() }],
         }),
       })
 
       const data = await response.json()
-      const text = data.content?.find((b: any) => b.type === 'text')?.text || 'No pude generar respuesta.'
+      const text = data.reply || 'No pude generar respuesta.'
 
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),

@@ -43,42 +43,6 @@ const QUICK_PROMPTS = [
   },
 ]
 
-function buildSystemPrompt(doctor: Doctor | null, patient: Patient | null): string {
-  const doctorInfo = doctor
-    ? `Eres el asistente de IA del Dr./Dra. ${doctor.full_name}, especialista en ${doctor.specialty?.replace('_', ' ') || 'medicina general'}.`
-    : 'Eres un asistente médico de IA altamente especializado.'
-
-  const patientContext = patient
-    ? `
-PACIENTE EN CONTEXTO:
-- Nombre: ${patient.first_name} ${patient.last_name}
-- RUT: ${patient.rut || 'No registrado'}
-- Género: ${patient.gender || 'No especificado'}
-- Fecha de nacimiento: ${patient.birth_date ? new Date(patient.birth_date).toLocaleDateString('es-CL') : 'No registrada'}
-- Especialidad: ${patient.specialty?.replace('_', ' ')}
-- Estado: ${patient.status}
-- Notas clínicas: ${patient.notes || 'Sin notas registradas'}
-`
-    : 'No hay paciente seleccionado. Responde consultas médicas generales.'
-
-  return `${doctorInfo}
-
-Tu rol es ser el asistente médico más completo e inteligente posible. Debes:
-1. Responder con precisión clínica y evidencia médica actualizada
-2. Sugerir medicamentos con dosis, vía de administración y contraindicaciones cuando sea relevante
-3. Analizar casos clínicos de forma sistemática
-4. Alertar sobre situaciones de riesgo o interacciones importantes
-5. Proporcionar información basada en guías clínicas actualizadas
-6. Hablar siempre en español, con terminología médica apropiada pero explicaciones claras
-7. Ser directo y útil, priorizando la eficiencia del médico
-
-IMPORTANTE: Siempre incluir el disclaimer de que tus sugerencias son de apoyo y no reemplazan el juicio clínico del médico.
-
-${patientContext}
-
-Responde de forma estructurada cuando sea apropiado, usando secciones claras. Sé conciso pero completo.`
-}
-
 function formatMessage(content: string): string {
   return content
     .replace(/^#{4,}\s(.+)$/gm, '<h5 style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;margin:10px 0 4px;opacity:0.6">$1</h5>')
@@ -151,23 +115,15 @@ export default function IAChat({ doctor, patients }: Props) {
     setLoading(true)
 
     try {
-      const systemPrompt = buildSystemPrompt(doctor, selectedPatient)
       const conversationHistory = messages
         .filter(m => m.id !== '0')
         .map(m => ({ role: m.role, content: m.content }))
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/ia/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': process.env.NEXT_PUBLIC_ANTHROPIC_API_KEY!,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          system: systemPrompt,
+          patientId: selectedPatient?.id ?? null,
           messages: [
             ...conversationHistory,
             { role: 'user', content: content.trim() }
@@ -176,7 +132,7 @@ export default function IAChat({ doctor, patients }: Props) {
       })
 
       const data = await response.json()
-      const text = data.content?.find((b: any) => b.type === 'text')?.text || 'No pude generar una respuesta.'
+      const text = data.reply || 'No pude generar una respuesta.'
 
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
